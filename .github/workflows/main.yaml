@@ -1,0 +1,28 @@
+name: Build Extension
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - uses: wyvox/action-setup-pnpm@v3
+      with: { node-version: 18 }
+    - name: Build
+      run: pnpm build
+    - name: Create ZIP archive
+      run: |
+        cd dist
+        zip -r ../extension.zip .
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: extension.zip
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
