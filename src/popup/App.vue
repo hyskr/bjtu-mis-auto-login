@@ -41,8 +41,8 @@ onMounted(async () => {
     }
     if (result.assessmentConfig) {
       assessmentConfig.value = result.assessmentConfig;
-      bestInputRef.value = Object.values(assessmentConfig.value.best).join('，');
-    }
+  }
+    bestInputRef.value = Object.values(assessmentConfig.value.best).join('，');
   } catch (error) {
     console.error('Failed to load config:', error);
   }
@@ -74,9 +74,9 @@ const handleSaveAssessment = async () => {
       .replace(/[,，]/g, ',')
       .split(',')
       .filter((item: string) => item.trim());
-    
+
     assessmentConfig.value.best = Object.fromEntries(values.map((v, i) => [i, v]));
-    
+
     await chrome.storage.sync.set({
       assessmentConfig: assessmentConfig.value
     });
@@ -158,17 +158,11 @@ const switchConfig = (configKey: string) => {
     <h2>评教配置</h2>
     <div class="form-group">
       <label>最佳选项关键词（用逗号分隔）</label>
-      <input type="text" 
-        v-model="bestInputRef"
-        placeholder="例如：非常符合，优秀" 
-        class="input" />
+      <input type="text" v-model="bestInputRef" placeholder="例如：非常符合，优秀" class="input" />
     </div>
     <div class="form-group">
       <label>评教内容</label>
-      <input type="text" 
-        v-model="assessmentConfig.text" 
-        placeholder="评教内容"
-        class="input" />
+      <input type="text" v-model="assessmentConfig.text" placeholder="评教内容" class="input" />
     </div>
     <div class="button-group">
       <button @click="handleSaveAssessment" class="button save">保存配置</button>
