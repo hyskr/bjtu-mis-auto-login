@@ -5,8 +5,11 @@ interface LoginConfig {
   username: string;
   password: string;
 }
+interface AssessmentConfig {
+  text: string;
+  best: { [key: string]: string };
+}
 
-// Reactive preset configurations
 const presetConfigs = reactive<Record<string, LoginConfig>>({
   empty: { username: '', password: '' }
 });
@@ -15,19 +18,30 @@ const config = ref<LoginConfig>({
   username: '',
   password: ''
 });
+const assessmentConfig = ref<AssessmentConfig>({
+  text: '好',
+  best: { 0: '非常符合', 1: '优秀' }
+});
+const bestInputRef = ref('');
+
 const message = ref('');
 
 onMounted(async () => {
   try {
     const result = await chrome.storage.sync.get([
       'loginConfig',
-      'presetConfigs'
+      'presetConfigs',
+      'assessmentConfig'
     ]);
     if (result.loginConfig) {
       config.value = result.loginConfig;
     }
     if (result.presetConfigs) {
       Object.assign(presetConfigs, result.presetConfigs);
+    }
+    if (result.assessmentConfig) {
+      assessmentConfig.value = result.assessmentConfig;
+      bestInputRef.value = Object.values(assessmentConfig.value.best).join('，');
     }
   } catch (error) {
     console.error('Failed to load config:', error);
@@ -51,6 +65,43 @@ const handleSave = async () => {
   } catch (error) {
     console.error('Failed to save config:', error);
     message.value = '保存失败';
+  }
+};
+
+const handleSaveAssessment = async () => {
+  try {
+    const values = bestInputRef.value
+      .replace(/[,，]/g, ',')
+      .split(',')
+      .filter((item: string) => item.trim());
+    
+    assessmentConfig.value.best = Object.fromEntries(values.map((v, i) => [i, v]));
+    
+    await chrome.storage.sync.set({
+      assessmentConfig: assessmentConfig.value
+    });
+    message.value = '配置已保存';
+  } catch (error) {
+    console.error('Failed to save config:', error);
+    message.value = '保存失败';
+  }
+};
+
+const handleClearAssessment = async () => {
+  try {
+    const defaultConfig = {
+      text: '好',
+      best: { 0: '非常符合', 1: '优秀' }
+    };
+    assessmentConfig.value = defaultConfig;
+    bestInputRef.value = Object.values(defaultConfig.best).join('，');
+    await chrome.storage.sync.set({
+      assessmentConfig: defaultConfig
+    });
+    message.value = '配置已重置';
+  } catch (error) {
+    console.error('Failed to clear config:', error);
+    message.value = '重置失败';
   }
 };
 
@@ -88,47 +139,46 @@ const switchConfig = (configKey: string) => {
 <template>
   <div class="container">
     <h2>登录配置</h2>
-
-    <!-- 快速切换按钮组 -->
     <div class="quick-switch">
-      <button
-        v-for="(_, key) in presetConfigs"
-        :key="key"
-        @click="switchConfig(key)"
-        class="switch-button"
-      >
+      <button v-for="(_, key) in presetConfigs" :key="key" @click="switchConfig(key)" class="switch-button">
         {{ key === 'empty' ? '空配置' : key }}
       </button>
     </div>
 
     <div class="form-group">
-      <input
-        type="text"
-        v-model="config.username"
-        placeholder="用户名"
-        class="input"
-      />
+      <input type="text" v-model="config.username" placeholder="用户名" class="input" />
     </div>
     <div class="form-group">
-      <input
-        type="password"
-        v-model="config.password"
-        placeholder="密码"
-        class="input"
-      />
+      <input type="password" v-model="config.password" placeholder="密码" class="input" />
     </div>
     <div class="button-group">
       <button @click="handleSave" class="button save">保存配置</button>
       <button @click="handleClear" class="button clear">清除配置</button>
+    </div>
+    <h2>评教配置</h2>
+    <div class="form-group">
+      <label>最佳选项关键词（用逗号分隔）</label>
+      <input type="text" 
+        v-model="bestInputRef"
+        placeholder="例如：非常符合，优秀" 
+        class="input" />
+    </div>
+    <div class="form-group">
+      <label>评教内容</label>
+      <input type="text" 
+        v-model="assessmentConfig.text" 
+        placeholder="评教内容"
+        class="input" />
+    </div>
+    <div class="button-group">
+      <button @click="handleSaveAssessment" class="button save">保存配置</button>
+      <button @click="handleClearAssessment" class="button clear">重置配置</button>
     </div>
     <div v-if="message" class="message">{{ message }}</div>
   </div>
 </template>
 
 <style scoped>
-/* 原有样式保持不变 */
-
-/* 添加快速切换按钮的样式 */
 .quick-switch {
   display: flex;
   gap: 8px;
